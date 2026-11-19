@@ -144,6 +144,11 @@ def video_folders(folder):
     return sorted((p for p in folder.iterdir() if p.is_dir() and (p / "upload.json").exists()), key=num)
 
 
+def tidy_credit(text):
+    """'Clip from xQc: ' (a source imported without a link) -> 'Clip from xQc'."""
+    return re.sub(r"(?m)^(Clips? from [^\n]*?):[ \t]*$", r"\1", text or "")
+
+
 def posting_markdown(folder):
     lines = [f"# Ready to post: {Path(folder).name}", "",
              "One section per MP4. YouTube Shorts: paste the title and description. "
@@ -154,7 +159,7 @@ def posting_markdown(folder):
         for item in json.loads((vf / "upload.json").read_text(encoding="utf-8")):
             name = Path(item["file"]).name
             title = (item.get("title") or "")[:100]
-            desc = item.get("description") or title
+            desc = tidy_credit(item.get("description") or title)
             lines += [f"## {vf.name} / {name}", "",
                       f"Hook on screen: {item.get('hook') or '(none)'} · {item.get('duration', 0):.0f}s"
                       + (f" · predicted {item['predicted']}x" if item.get("predicted") else ""), "",

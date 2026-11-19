@@ -28,6 +28,11 @@ class TikTokCaption(unittest.TestCase):
         self.assertEqual(cap.lower().count("#gta6"), 1)
         self.assertEqual(cap.count("#fyp"), 1)
 
+    def test_credit_without_link_loses_dangling_colon(self):
+        self.assertEqual(cloud.tidy_credit("Take\n\nClip from xQc: \n\n#gta6"), "Take\n\nClip from xQc\n\n#gta6")
+        kept = "Clip from xQc: https://youtu.be/x"
+        self.assertEqual(cloud.tidy_credit(kept), kept)
+
     def test_seconds(self):
         self.assertEqual(cloud.seconds("1:02:03"), 3723)
         self.assertEqual(cloud.seconds("62:03"), 3723)

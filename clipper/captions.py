@@ -39,7 +39,11 @@ HOOK_STYLES = {
 }
 # Vertical positions: "fit" = 16:9 game centred; "split" = facecam top 768px, game below.
 # In split the hook sits on the seam so it never covers the streamer's face.
-LAYOUTS = {"fit": {"hook_y": 400, "caption_y": 1420}, "split": {"hook_y": 768, "caption_y": 1380}}
+LAYOUTS = {"fit": {"hook_y": 400, "caption_y": 1420, "credit_y": 1308},
+           "split": {"hook_y": 768, "caption_y": 1380, "credit_y": 1505}}
+# The on-screen credit (`credit_tag`) sits between the game and the captions in "fit", under the captions in
+# "split": clear of the hook, the face, and the platforms' buttons on the right edge and along the bottom.
+CREDIT = {"font": "tiktok-semibold", "size": 40, "fill": (255, 255, 255), "pill": (0, 0, 0, 150)}
 _fonts = {}
 
 
@@ -255,8 +259,32 @@ def parse_markup(text):
     return out
 
 
-def render_hook(text, path, style="box", layout="fit"):
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+def draw_credit(img, text, layout="fit"):
+    """A small '@streamer' tag on a translucent pill, centred at the layout's credit_y. Returns the image."""
+    text = (text or "").strip()
+    if not text:
+        return img
+    f = font_for(CREDIT["font"], CREDIT["size"], text)
+    while f.getlength(text) > 760 and f.size > 28:  # long multi-streamer credits shrink instead of spilling
+        f = font_for(CREDIT["font"], f.size - 2, text)
+    while f.getlength(text) > 760 and len(text) > 2:  # still too wide at the smallest size: cut with an ellipsis
+        text = text[:-2].rstrip(" ·") + "…"
+    layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    x0, y0, x1, y1 = d.textbbox((0, 0), text, font=f)
+    tw, th = x1 - x0, y1 - y0
+    cy = LAYOUTS.get(layout, LAYOUTS["fit"])["credit_y"]
+    pad_x, pad_y = 26, 12
+    left, top = (W - tw) / 2 - pad_x, cy - th / 2 - pad_y
+    d.rounded_rectangle((left, top, left + tw + 2 * pad_x, top + th + 2 * pad_y), radius=(th + 2 * pad_y) // 2,
+                        fill=CREDIT["pill"])
+    d.text(((W - tw) / 2 - x0, cy - th / 2 - y0), text, font=f, fill=CREDIT["fill"])
+    return Image.alpha_composite(img, layer)
+
+
+def render_hook(text, path, style="box", layout="fit", credit=None):
+    """The hook banner (and the optional on-screen credit) as one full-frame transparent PNG."""
+    img = draw_credit(Image.new("RGBA", (W, H), (0, 0, 0, 0)), credit, layout)
     st = HOOK_STYLES.get(style)
     if st is None or not text.strip():
         img.save(path)

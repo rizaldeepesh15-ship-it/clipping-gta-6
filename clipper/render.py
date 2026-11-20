@@ -190,12 +190,24 @@ def prepare_clip(job, pick, fallback_words, cfg, tmp):
             "transcript": source, "voices_separated": bool(stems), "words": words, "fx": fx, "music": used}
 
 
-def encode_variant(job, pick, prep, hook, cfg, out_path, tmp):
+def credit_text(pick, creds, cfg=None):
+    """The on-screen credit for a pick, or None. `credit_tag` on the pick (else the profile's default, off unless
+    set): true -> '@Name' per credited streamer, joined; a string -> exactly that text; false/absent -> none."""
+    tag = pick.get("credit_tag", (cfg or {}).get("credit_tag"))
+    if not tag:
+        return None
+    if isinstance(tag, str):
+        return tag.strip() or None
+    names = [n for n in dict.fromkeys(ch for ch, _ in creds or []) if n]
+    return " · ".join("@" + re.sub(r"\s+", "", n) for n in names) or None
+
+
+def encode_variant(job, pick, prep, hook, cfg, out_path, tmp, credit=None):
     s, e = float(pick["start"]), float(pick["end"])
     dur = e - s
     layout = prep["layout"]
     hook_png = tmp / f"hook_{out_path.stem}.png"
-    captions.render_hook(hook, hook_png, pick.get("hook_style", "box"), caption_layout(layout))
+    captions.render_hook(hook, hook_png, pick.get("hook_style", "box"), caption_layout(layout), credit)
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{s:.3f}", "-t", f"{dur:.3f}",
            "-i", str(job / "source.mp4"), "-f", "concat", "-safe", "0", "-i", str(prep["captions"]),
            "-loop", "1", "-framerate", "30", "-t", f"{dur:.3f}", "-i", str(hook_png), "-i", str(prep["bed"])]
@@ -525,7 +537,7 @@ def render(job, picks, cfg, first_hook_only=False, out_dir=None, top=0):
             for i, hook in enumerate(hooks):
                 mp4 = folder / hook_filename(hook, taken)
                 print(f"[render]   {mp4.relative_to(out_dir)}", flush=True)
-                encode_variant(src_job, flat, prep, hook, cfg, mp4, tmp)
+                encode_variant(src_job, flat, prep, hook, cfg, mp4, tmp, credit_text(pick, creds, cfg))
                 variants.append({"file": str(mp4), "hook": hook, "check": probe(mp4)})
         (folder / "upload.json").write_text(json.dumps(upload_manifest(pick, meta, cfg, variants, titles, creds, job,
                                                                        prep.get("music")),

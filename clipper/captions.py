@@ -29,13 +29,15 @@ SPEAKER_COLOURS = [((255, 255, 255), (255, 225, 60)), ((110, 215, 255), (255, 25
 SPEAKER_FONTS = ["bebas", "luckiest", "tiktok-bold", "montserrat-black"]
 FONT_SIZES = {"montserrat-black": 84, "bebas": 116, "luckiest": 96, "tiktok-bold": 90, "tiktok-semibold": 90}
 
+HOOK_GOLD = (255, 225, 60)  # every hook style: white text, keyword in gold (the user's brand colours)
 HOOK_STYLES = {
     "bold": {"font": "montserrat-black", "size": 88, "upper": True, "fill": (255, 255, 255),
-             "keyword": (255, 225, 60), "stroke": 3, "shadow": True, "box": False},
-    "box": {"font": "tiktok-bold", "size": 66, "upper": False, "fill": (15, 15, 15),
-            "keyword": (30, 120, 255), "stroke": 0, "shadow": False, "box": True},
+             "keyword": HOOK_GOLD, "stroke": 3, "shadow": True, "box": False},
+    # meme box, dark so white and gold read clearly (gold on a white box would not)
+    "box": {"font": "tiktok-bold", "size": 66, "upper": False, "fill": (255, 255, 255),
+            "keyword": HOOK_GOLD, "stroke": 0, "shadow": False, "box": True, "box_fill": (12, 12, 12, 235)},
     "label": {"font": "tiktok-semibold", "size": 70, "upper": False, "fill": (255, 255, 255),
-              "keyword": (200, 90, 255), "stroke": 5, "shadow": False, "box": False},
+              "keyword": HOOK_GOLD, "stroke": 5, "shadow": False, "box": False},
 }
 # Vertical positions: "fit" = 16:9 game centred; "split" = facecam top 768px, game below.
 # In split the hook sits on the seam so it never covers the streamer's face.
@@ -302,7 +304,7 @@ def render_hook(text, path, style="box", layout="fit", credit=None):
     shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     sd = ImageDraw.Draw(shadow)
     if st["box"]:
-        d.rounded_rectangle((50, top, W - 50, top + box_h), radius=30, fill=(255, 255, 255, 248))
+        d.rounded_rectangle((50, top, W - 50, top + box_h), radius=30, fill=st.get("box_fill", (255, 255, 255, 248)))
     y = top + 25
     space = f.getlength(" ")
     for line in lines:
